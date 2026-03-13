@@ -320,26 +320,53 @@
 
         // Llamada a Python para Sincronizar
         window.sincronizarAPI = async function() {
-            const btn = document.getElementById('btn-sync');
-            const icon = document.getElementById('icon-sync');
-            const text = document.getElementById('text-sync');
-            btn.disabled = true; icon.classList.add('animate-spin'); text.innerText = "Descargando...";
-            
-            try {
-                const response = await fetch('/api/importar', { method: 'POST' });
-                const result = await response.json();
-                if(result.status === "success") {
-                    updateGlobalData(result.data);
-                    if(!chartKcalInst) initCharts();
-                    changeView(currentView); 
-                    text.innerText = "¡Actualizado!";
-                } else { alert("Error: " + result.message); text.innerText = "Sincronizar"; }
-            } catch (error) { alert("El servidor Python no responde."); text.innerText = "Sincronizar"; }
-            
-            btn.disabled = false; icon.classList.remove('animate-spin');
-            setTimeout(() => { if(text.innerText === "¡Actualizado!") text.innerText = "Sincronizar"; }, 3000);
-        }
+  const btn = document.getElementById('btn-sync');
+  const icon = document.getElementById('icon-sync');
+  const text = document.getElementById('text-sync');
 
+  btn.disabled = true;
+  icon.classList.add('animate-spin');
+  text.innerText = "Descargando...";
+
+  try {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Usuario no autenticado");
+
+    // ✅ AQUÍ está la clave
+    const token = await user.getIdToken();
+
+    const response = await fetch('/api/importar', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    const result = await response.json();
+
+    if (result.status === "success") {
+      updateGlobalData(result.data);
+      if (!chartKcalInst) initCharts();
+      changeView(currentView);
+      text.innerText = "¡Actualizado!";
+    } else {
+      alert("Error: " + result.message);
+      text.innerText = "Sincronizar";
+    }
+  } catch (error) {
+    alert(error.message || "Error al sincronizar");
+    text.innerText = "Sincronizar";
+  }
+
+  btn.disabled = false;
+  icon.classList.remove('animate-spin');
+
+  setTimeout(() => {
+    if (text.innerText === "¡Actualizado!") {
+      text.innerText = "Sincronizar";
+    }
+  }, 3000);
+};
         // Actualizar variables y renderizar HTML superior
         window.updateGlobalData = function(data) {
             catsLabels = data.fechas; isoDates = data.isoDates;
